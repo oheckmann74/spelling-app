@@ -1,5 +1,4 @@
 import "./App.css";
-import WordsFile from "./google-10000-english-usa-no-swears-medium.txt";
 import React from "react";
 import Grid from "@material-ui/core/Grid";
 import FormControl from "@material-ui/core/FormControl";
@@ -39,15 +38,35 @@ export class TTS {
       OutputFormat: "mp3", // For example, 'mp3'
       SampleRate: "16000", // For example, '16000
       Text: "hello world", // The 'speakText' function supplies this value
-      TextType: "text", // For example, "text"
+      TextType: "ssml", // For example, "text"
       VoiceId: "Matthew", // For example, "Matthew"
     };
     console.log("TTS constructed");
   }
 
+  setVoice(voice) {
+    this.speechParams.VoiceId = voice;
+  }
+
+  getVoices(language) {
+    // todo replace with this.client.describeVoices() call, and filter for right language
+    return [
+      "Ivy",
+      "Joanna",
+      "Kendra",
+      "Kimberly",
+      "Salli",
+      "Joey",
+      "Justin",
+      "Kevin",
+      "Matthew",
+    ];
+  }
+
   async speakText(text, newURLHandler) {
     console.log("speaking: " + text);
-    this.speechParams.Text = text;
+    this.speechParams.Text =
+      '<speak><prosody rate="slow">' + text + "</prosody></speak>";
     const {
       getSynthesizeSpeechUrl,
     } = require("@aws-sdk/polly-request-presigner");
@@ -67,14 +86,28 @@ export class TTS {
 
 //-------------
 
+var LISTS = {
+  en: {
+    Short: "./google-10000-english-usa-no-swears-short.txt",
+    Medium: "./google-10000-english-usa-no-swears-medium.txt",
+    Long: "./google-10000-english-usa-no-swears-long.txt",
+  },
+};
+
 export class WordGenerator {
-  constructor(language, list, callWhenReady) {
-    console.log("constructor word generator " + language + " " + list);
+  constructor() {
+    console.log("word generator constructor");
     this.words = [];
-    fetch(WordsFile)
+  }
+
+  load(language, list, callWhenReady) {
+    console.log("word generator loading list started");
+    
+    fetch(LISTS[list])
       .then((response) => response.text())
       .then((data) => {
         this.words = data.split("\n");
+        console.log("word generator done loading list");
         callWhenReady();
       })
       .catch((error) => {
@@ -82,9 +115,15 @@ export class WordGenerator {
           "There has been a problem with your fetch operation:",
           error
         );
-        alert("Could not load word list");
+        alert("Could not load word list, sorry!");
       });
   }
+
+  getLists(language) {
+    //alert(LISTS[language]);
+    return Object.keys(LISTS[language]);
+  }
+
   nextWord() {
     //console.log(this.words);
     //console.log(this.words.length);
@@ -120,15 +159,14 @@ function App() {
   const classes = useStyles();
   const [settings, setSettings] = React.useState(() => {
     return {
-      language: "english",
-      wordList: "medium",
-      voice: "Kevin",
-      generator: new WordGenerator("english", "medium", () => {
-        console.log("word list loaded");
-      }),
+      language: "en",
+      wordList: "Medium",
+      voice: "Matthew",
+      generator: new WordGenerator(),
       tts: new TTS(),
     };
   });
+  settings.generator.load(settings.language, settings.wordList, () => {});
   const [word, setWord] = React.useState("");
   const [userInput, setUserInput] = React.useState("");
   const [feedback, setFeedback] = React.useState(
@@ -137,7 +175,13 @@ function App() {
 
   const handleNewWordClick = () => {
     setFeedback(
-      <Alert severity="info">You have given up. Let's try a new word...</Alert>
+      <Alert severity="warning">
+        You have given up. Let's try a new word...
+      </Alert>
+    );
+    setTimeout(
+      () => setFeedback(<Alert severity="info">Guess the new word</Alert>),
+      800
     );
     nextWord();
   };
@@ -174,14 +218,51 @@ function App() {
       userInput.trim().toLocaleUpperCase().localeCompare(word.toUpperCase()) ===
       0
     ) {
-      setFeedback(
-        <Alert severity="info">Correct! Let's try the next one...</Alert>
+      setFeedback(<Alert severity="info">Correct! The word is {word}.</Alert>);
+      setTimeout(nextWord(), 200);
+      setTimeout(
+        () => setFeedback(<Alert severity="info">Guess the new word</Alert>),
+        1000
       );
-      nextWord();
     } else {
       setFeedback(<Alert severity="info">Wrong, try again...</Alert>);
       audio.play();
     }
+  };
+
+  const handleVoiceChange = ({ target }) => {
+    console.log("voice changed to " + target.value);
+    settings.tts.setVoice(target.value);
+    setSettings({...settings, voice: target.value});
+    nextWord();
+  };
+
+  const handleHintClick = () => {
+    let hint = "";
+    [...word].forEach((letter) => {
+      if (Math.random() < 0.5) {
+        hint += "_";
+      } else {
+        hint += letter;
+      }
+    });
+    setFeedback(<Alert severity="error">Here are some letters: "{hint}"</Alert>);
+  };
+
+  const handleWordListChange = ({ target }) => {
+    setFeedback(
+      <Alert severity="info">Let me load new word list, one second...</Alert>
+    );
+    settings.generator.load(settings.language, target.value, () => {
+      setFeedback(<Alert severity="info">Finished loading new words</Alert>);
+      setTimeout(() => setFeedback(""), 500);
+    });
+    setSettings({...settings, wordList: target.value});
+  };
+
+  const handleLanguageChange = ({ target }) => {
+    console.log("language changed to " + target.value);
+    //todo
   };
 
   return (
@@ -193,12 +274,11 @@ function App() {
             <Select
               labelId="language"
               id="language-select"
-              value={10}
-              onChange=""
+              value={settings.language}
+              onChange={handleLanguageChange}
             >
-              <MenuItem value={10}>Ten</MenuItem>
-              <MenuItem value={20}>Twenty</MenuItem>
-              <MenuItem value={30}>Thirty</MenuItem>
+              <MenuItem value="en">English</MenuItem>
+              <MenuItem value="de">German</MenuItem>
             </Select>
           </FormControl>
         </Grid>
@@ -209,12 +289,12 @@ function App() {
             <Select
               labelId="word-list"
               id="word-list-select"
-              value={10}
-              onChange=""
+              value={settings.wordList}
+              onChange={handleWordListChange}
             >
-              <MenuItem value={10}>Ten</MenuItem>
-              <MenuItem value={20}>Twenty</MenuItem>
-              <MenuItem value={30}>Thirty</MenuItem>
+              {settings.generator.getLists(settings.language).map((list) => (
+                <MenuItem value={list}>{list}</MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Grid>
@@ -222,29 +302,59 @@ function App() {
         <Grid item xs={4}>
           <FormControl className={classes.formControl}>
             <InputLabel id="voice">Voice</InputLabel>
-            <Select labelId="voice" id="voice-select" value={10} onChange="">
-              <MenuItem value={10}>Ten</MenuItem>
-              <MenuItem value={20}>Twenty</MenuItem>
-              <MenuItem value={30}>Thirty</MenuItem>
+            <Select
+              labelId="voice"
+              id="voice-select"
+              value={settings.voice}
+              onChange={handleVoiceChange}
+            >
+              {settings.tts.getVoices(settings.language).map((voice) => (
+                <MenuItem value={voice}>{voice}</MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Grid>
 
-        <Grid item xs={12}>
+        <Grid item xs={4}>
           <div>
             <Button
+              variant="contained"
+              color="primary"
               onClick={() => {
                 audio.play();
               }}
               disabled={url === "" ? true : false}
               fullWidth
             >
-              Play Again
+              Say Again
             </Button>
           </div>
         </Grid>
 
-        <Grid item xs={6}>
+        <Grid item xs={4}>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={handleHintClick}
+            fullWidth
+            disabled={word === "" ? true : false}
+          >
+            Hint
+          </Button>
+        </Grid>
+
+        <Grid item xs={4}>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={handleNewWordClick}
+            fullWidth
+          >
+            New Word
+          </Button>
+        </Grid>
+
+        <Grid item xs={8}>
           <TextField
             id="word-input"
             value={userInput}
@@ -260,7 +370,7 @@ function App() {
             fullWidth
           />
         </Grid>
-        <Grid item xs={3}>
+        <Grid item xs={4}>
           <Button
             type="submit"
             variant="contained"
@@ -271,22 +381,10 @@ function App() {
             Submit
           </Button>
         </Grid>
-        <Grid item xs={3}>
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={handleNewWordClick}
-            fullWidth
-          >
-            New Word
-          </Button>
-        </Grid>
-
 
         <Grid item xs={12}>
           {feedback}
         </Grid>
-
       </Grid>
     </div>
   );
