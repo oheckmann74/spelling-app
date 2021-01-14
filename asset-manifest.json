@@ -1,0 +1,24 @@
+{
+  "files": {
+    "main.css": "/spelling-app/static/css/main.c24ef99e.chunk.css",
+    "main.js": "/spelling-app/static/js/main.def3cbf7.chunk.js",
+    "main.js.map": "/spelling-app/static/js/main.def3cbf7.chunk.js.map",
+    "runtime-main.js": "/spelling-app/static/js/runtime-main.66272d0f.js",
+    "runtime-main.js.map": "/spelling-app/static/js/runtime-main.66272d0f.js.map",
+    "static/js/2.4107df61.chunk.js": "/spelling-app/static/js/2.4107df61.chunk.js",
+    "static/js/2.4107df61.chunk.js.map": "/spelling-app/static/js/2.4107df61.chunk.js.map",
+    "index.html": "/spelling-app/index.html",
+    "static/css/main.c24ef99e.chunk.css.map": "/spelling-app/static/css/main.c24ef99e.chunk.css.map",
+    "static/js/2.4107df61.chunk.js.LICENSE.txt": "/spelling-app/static/js/2.4107df61.chunk.js.LICENSE.txt",
+    "static/media/de-top-500.092bf686.txt": "/spelling-app/static/media/de-top-500.092bf686.txt",
+    "static/media/google-10000-english-usa-no-swears-long.64e0047a.txt": "/spelling-app/static/media/google-10000-english-usa-no-swears-long.64e0047a.txt",
+    "static/media/google-10000-english-usa-no-swears-medium.ed99d00a.txt": "/spelling-app/static/media/google-10000-english-usa-no-swears-medium.ed99d00a.txt",
+    "static/media/google-10000-english-usa-no-swears-short.f7ab0961.txt": "/spelling-app/static/media/google-10000-english-usa-no-swears-short.f7ab0961.txt"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.66272d0f.js",
+    "static/js/2.4107df61.chunk.js",
+    "static/css/main.c24ef99e.chunk.css",
+    "static/js/main.def3cbf7.chunk.js"
+  ]
+}
