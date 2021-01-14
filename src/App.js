@@ -1,4 +1,10 @@
+import WL_en_medium from "./google-10000-english-usa-no-swears-medium.txt";
+import WL_en_long from "./google-10000-english-usa-no-swears-long.txt";
+import WL_en_short from "./google-10000-english-usa-no-swears-short.txt";
+import WL_de_top500 from "./de-top-500.txt";
+
 import "./App.css";
+
 import React from "react";
 import Grid from "@material-ui/core/Grid";
 import FormControl from "@material-ui/core/FormControl";
@@ -10,6 +16,21 @@ import { useState } from "react";
 import Button from "@material-ui/core/Button";
 import Alert from "@material-ui/lab/Alert";
 import TextField from "@material-ui/core/TextField";
+
+const VOICES = {
+  en: [
+    "Ivy",
+    "Joanna",
+    "Kendra",
+    "Kimberly",
+    "Salli",
+    "Joey",
+    "Justin",
+    "Kevin",
+    "Matthew",
+  ],
+  de: ["Marlene", "Vicki", "Hans"],
+};
 
 export class TTS {
   constructor() {
@@ -49,18 +70,8 @@ export class TTS {
   }
 
   getVoices(language) {
-    // todo replace with this.client.describeVoices() call, and filter for right language
-    return [
-      "Ivy",
-      "Joanna",
-      "Kendra",
-      "Kimberly",
-      "Salli",
-      "Joey",
-      "Justin",
-      "Kevin",
-      "Matthew",
-    ];
+    // todo replace with this.client.describeVoices() call,
+    return VOICES[language];
   }
 
   async speakText(text, newURLHandler) {
@@ -88,9 +99,12 @@ export class TTS {
 
 var LISTS = {
   en: {
-    Short: "./google-10000-english-usa-no-swears-short.txt",
-    Medium: "./google-10000-english-usa-no-swears-medium.txt",
-    Long: "./google-10000-english-usa-no-swears-long.txt",
+    Short: WL_en_short,
+    Medium: WL_en_medium,
+    Long: WL_en_long,
+  },
+  de: {
+    "Top 500": WL_de_top500,
   },
 };
 
@@ -102,8 +116,8 @@ export class WordGenerator {
 
   load(language, list, callWhenReady) {
     console.log("word generator loading list started");
-    
-    fetch(LISTS[list])
+
+    fetch(LISTS[language][list])
       .then((response) => response.text())
       .then((data) => {
         this.words = data.split("\n");
@@ -192,14 +206,18 @@ function App() {
     return new Audio(url);
   });
 
-  const nextWord = () => {
-    const newWord = settings.generator.nextWord();
+  const speakWord = (newWord = word) => {
     settings.tts.speakText(newWord, (newURL) => {
       setURL(newURL);
       console.log("new URL received");
       audio.autoplay = true;
       audio.src = newURL;
     });
+  };
+
+  const nextWord = () => {
+    const newWord = settings.generator.nextWord();
+    speakWord(newWord);
     setUserInput("");
     setWord(newWord);
   };
@@ -231,10 +249,14 @@ function App() {
   };
 
   const handleVoiceChange = ({ target }) => {
-    console.log("voice changed to " + target.value);
-    settings.tts.setVoice(target.value);
-    setSettings({...settings, voice: target.value});
-    nextWord();
+    changeVoice(target.value);
+    speakWord();
+  };
+
+  const changeVoice = (voice) => {
+    console.log("voice changed to " + voice);
+    settings.tts.setVoice(voice);
+    setSettings({ ...settings, voice: voice });
   };
 
   const handleHintClick = () => {
@@ -246,23 +268,40 @@ function App() {
         hint += letter;
       }
     });
-    setFeedback(<Alert severity="error">Here are some letters: "{hint}"</Alert>);
+    setFeedback(
+      <Alert severity="error">Here are some letters: "{hint}"</Alert>
+    );
   };
 
   const handleWordListChange = ({ target }) => {
+    changeList(target.value);
+  };
+
+  const changeList = (list) => {
+    console.log("List changed to " + list);
     setFeedback(
       <Alert severity="info">Let me load new word list, one second...</Alert>
     );
-    settings.generator.load(settings.language, target.value, () => {
+    settings.generator.load(settings.language, list, () => {
       setFeedback(<Alert severity="info">Finished loading new words</Alert>);
       setTimeout(() => setFeedback(""), 500);
     });
-    setSettings({...settings, wordList: target.value});
+    setSettings({ ...settings, wordList: list });
+    nextWord();
   };
 
   const handleLanguageChange = ({ target }) => {
     console.log("language changed to " + target.value);
-    //todo
+    const list = settings.generator.getLists(target.value)[0];
+    changeList(list);
+    const voice = settings.tts.getVoices(target.value)[0];
+    changeVoice(voice);
+    setSettings({
+      ...settings,
+      voice: voice,
+      language: target.value,
+      wordList: list,
+    });
   };
 
   return (
@@ -360,7 +399,8 @@ function App() {
             value={userInput}
             onInput={handleUserInput}
             onKeyDown={(e) => {
-              if (e.keyCode === 13) {
+              if (e.key === "Enter") {
+                //(e.keyCode === 13) {
                 handleSubmit(e);
               }
             }}
@@ -373,7 +413,6 @@ function App() {
         <Grid item xs={4}>
           <Button
             type="submit"
-            variant="contained"
             color="primary"
             onClick={handleSubmit}
             fullWidth
