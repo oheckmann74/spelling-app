@@ -16,6 +16,7 @@ import { useState } from "react";
 import Button from "@material-ui/core/Button";
 import Alert from "@material-ui/lab/Alert";
 import TextField from "@material-ui/core/TextField";
+import Typography from "@material-ui/core/Typography";
 
 const VOICES = {
   en: [
@@ -77,7 +78,7 @@ export class TTS {
   async speakText(text, newURLHandler) {
     console.log("speaking: " + text);
     this.speechParams.Text =
-      '<speak><prosody rate="slow">' + text + "</prosody></speak>";
+      '<speak><prosody volume="loud"><prosody rate="x-slow">' + text + "</prosody></prosody></speak>";
     const {
       getSynthesizeSpeechUrl,
     } = require("@aws-sdk/polly-request-presigner");
@@ -182,10 +183,24 @@ function App() {
   });
   settings.generator.load(settings.language, settings.wordList, () => {});
   const [word, setWord] = React.useState("");
+  const [totalPoints, setTotalPoints] = React.useState(0);
+  const [points, setPoints] = React.useState(0);
   const [userInput, setUserInput] = React.useState("");
   const [feedback, setFeedback] = React.useState(
     <Alert severity="info">Click New Word to start!</Alert>
   );
+
+  const reducePoints = () => {
+    setPoints(Math.max(1, points-1));
+  }
+
+  const resetPoints = () => {
+    setPoints(5);
+  }
+
+  const addPoints = () => {
+    setTotalPoints(totalPoints+points);
+  }
 
   const handleNewWordClick = () => {
     setFeedback(
@@ -220,6 +235,7 @@ function App() {
     speakWord(newWord);
     setUserInput("");
     setWord(newWord);
+    resetPoints();
   };
 
   const handleUserInput = ({ target }) => {
@@ -242,8 +258,10 @@ function App() {
         () => setFeedback(<Alert severity="info">Guess the new word</Alert>),
         1000
       );
+      addPoints();
     } else {
       setFeedback(<Alert severity="info">Wrong, try again...</Alert>);
+      reducePoints();
       audio.play();
     }
   };
@@ -271,6 +289,7 @@ function App() {
     setFeedback(
       <Alert severity="error">Here are some letters: "{hint}"</Alert>
     );
+    reducePoints();
   };
 
   const handleWordListChange = ({ target }) => {
@@ -421,9 +440,18 @@ function App() {
           </Button>
         </Grid>
 
+        <Grid item xs={8}>
+          <Typography align='left' >Total Points: {totalPoints}</Typography>
+        </Grid>
+        <Grid item xs={4}>
+          <Typography >+{points}</Typography>
+        </Grid>
+
         <Grid item xs={12}>
           {feedback}
         </Grid>
+
+
       </Grid>
     </div>
   );
